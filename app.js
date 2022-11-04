@@ -11,26 +11,50 @@ const api = process.env.API_URL;
 app.use(express.json());
 app.use(morgan("tiny"));
 
-app.get(`${api}/products`, (req, res) => {
-  const products = {
-    id: 1,
-    name: "keyvan",
-    image: "some_url",
-  };
-  res.send(products);
+const productsSchema = mongoose.Schema({
+  name: { type: String, required: true },
+  image: String,
+  countInStock: { type: Number },
+});
+
+const Products = mongoose.model("products", productsSchema);
+
+app.get(`${api}/products`, async (req, res) => {
+  const productList = await Products.find();
+
+  if (!productList) {
+    res.status(500).json({
+      success: false,
+    });
+  }
+  res.send(productList);
 });
 
 app.post(`${api}/products`, (req, res) => {
-  const newProducts = req.body;
-  console.log(newProducts);
-  res.send(newProducts);
+  const product = new Products({
+    name: req.body.name,
+    image: req.body.image,
+    countInstock: req.body.countInstock,
+  });
+
+  product
+    .save()
+    .then((createdProducts) => {
+      res.status(201).json(createdProducts);
+    })
+    .catch((err) => {
+      res.status(500).json({
+        error: err,
+        success: false,
+      });
+    });
 });
 
 mongoose
   .connect(process.env.CONNECTION_STRING, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    dbName: "edoctor-database",
+    dbName: "eshop-database",
   })
   .then(() => {
     console.log("database connection is ready");
